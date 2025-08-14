@@ -1,0 +1,129 @@
+Kannst du mir jetzt einen Text schreiben, der nochmal zusammenfasst, was wir gemessen haben, wieso wir e sgemessen haben und welchen Mehrwert wir dadurch im paper haben werden? Danke 
+
+
+ChatGPT:
+
+Nachgedacht für 7s
+Kurzfassung für das Paper:
+
+Wir haben eine deterministische STM-Mikro-Workload aufgebaut (Barrier-Sync, per-Thread Seed, --ops statt Zeitsteuerung) und auf Windows mit hoher Prozesspriorität und fester CPU-Affinität ausgeführt. Gemessen wurde eine 3×3-Baseline: Threads {2,4,8} × Konfliktlevel {low, med, high}, jeweils mit 1 000 000 Operationen, Seed = 1. Artefakte: pro Lauf memtrace_abort.csv (Abort-Events) und memtrace_summary.txt (Aggregat).
+
+Ergebnisse: In allen Läufen gilt events_total = aborts, Transfers bytes_h2d/d2h = 0 (STM-Dummy), idle_total_us = 0. Die beobachteten Abortraten (Aborts / 1e6 Ops) treffen die Sollwerte sehr genau:
+• low ≈ 0.02 (t2: 0.019825; t4: 0.019734; t8: 0.019831)
+• med ≈ 0.15 (t2: 0.149853; t4: 0.149478; t8: 0.149181)
+• high ≈ 0.40 (t2: 0.400136; t4: 0.399961; t8: 0.399408)
+Zeitliche Schwankungen im Messfenster lagen nur im Promille-Bereich und sind für unsere ops-basierte Bewertung irrelevant.
+
+Mehrwert fürs Paper: (1) Reproduzierbarkeit: Der deterministische Harness belegt, dass unsere Messungen bitstabil sind und nicht vom OS-Jitter abhängen. (2) Korrektheit des Tracings: memtrace_abort.csv und Summary sind konsistent, die Pipeline funktioniert end-to-end. (3) Kalibrierte Last: Drei Konfliktregime liefern kontrollierte, realistisch skalierende Abortraten als belastbare Baselines. (4) Grundlage für weitere Evaluierung: Auf dieser Matrix können wir nun Overheads, Throughput und Effekt von Optimierungen (z. B. Backoff-Strategien, Layout-Änderungen) sauber und reproduzierbar quantifizieren.
+
+
+
+
+
+
+Du:
+Sollten wir später auch eine Zeitmessung durchführen, wenn ich wieder in Ubuntu bin?
+
+
+ChatGPT:
+
+Nachgedacht für 5s
+Ja, sinnvoll.
+
+
+
+
+
+
+Du:
+Kannst du mir nochmal auflisten, was wir sinncollerweise nochmal für messungen auf ubuntu ausführen sollen?
+
+
+ChatGPT:
+
+Nachgedacht für 40s
+Kurz-Messplan für Ubuntu:
+
+System vorbereiten
+
+bash
+Kopieren
+Bearbeiten
+sudo apt-get update
+sudo apt-get install -y linux-tools-$(uname -r) linux-tools-common numactl cpupower
+sudo cpupower frequency-set -g performance
+# Boost optional aus (AMD):
+echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost
+# (Intel-Alternative: echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo)
+sudo systemctl stop irqbalance
+Determinismus (ops-basiert, Seed=1)
+
+bash
+Kopieren
+Bearbeiten
+cargo run -p hpc-core --release --features memtrace --example stm_abort -- --threads 4 --conflict med --ops 1000000 --seed 1
+mv memtrace_abort.csv m1.csv; mv memtrace_summary.txt s1.txt
+cargo run -p hpc-core --release --features memtrace --example stm_abort -- --threads 4 --conflict med --ops 1000000 --seed 1
+diff -u <(grep -E 'events_total|aborts|bytes_' s1.txt) <(grep -E 'events_total|aborts|bytes_' memtrace_summary.txt)
+wc -l m1.csv memtrace_abort.csv
+Baseline-Matrix (t={2,4,8,16} × conflict={low,med,high}, je 1e6 Ops), mit Affinität & RT-Prio
+
+bash
+Kopieren
+Bearbeiten
+for c in low med high; do
+  for t in 2 4 8 16; do
+    mkdir -p results/FGOS_ubuntu/seed1/$c/t$t
+    taskset -c 0-$(($t-1)) sudo chrt -f 50 \
+      cargo run -p hpc-core --release --features memtrace --example stm_abort -- \
+      --threads $t --conflict $c --ops 1000000 --seed 1
+    mv memtrace_abort.csv results/FGOS_ubuntu/seed1/$c/t$t/
+    mv memtrace_summary.txt results/FGOS_ubuntu/seed1/$c/t$t/
+  done
+done
+Laufzeit/Throughput-Varianz (10 Wiederholungen)
+
+bash
+Kopieren
+Bearbeiten
+for i in {1..10}; do /usr/bin/time -f '%E real' \
+  taskset -c 0-3 cargo run -p hpc-core --release --features memtrace --example stm_abort -- \
+  --threads 4 --conflict med --ops 1000000 --seed 1 \
+  2>> results/FGOS_ubuntu/seed1/timing_med_t4.txt; done
+CPU-Counter (perf) für eine repräsentative Zeile (z. B. med,t=4)
+
+bash
+Kopieren
+Bearbeiten
+taskset -c 0-3 perf stat -d -r 5 \
+  cargo run -p hpc-core --release --features memtrace --example stm_abort -- \
+  --threads 4 --conflict med --ops 1000000 --seed 1 \
+  2> results/FGOS_ubuntu/seed1/perf_med_t4.txt
+NUMA-Check (falls Mehr-Socket/TRX40): gleiche Runs einmal mit NUMA-Bindung
+
+bash
+Kopieren
+Bearbeiten
+numactl --cpunodebind=0 --physcpubind=0-3 \
+  cargo run -p hpc-core --release --features memtrace --example stm_abort -- \
+  --threads 4 --conflict med --ops 1000000 --seed 1
+Overhead von memtrace quantifizieren
+
+bash
+Kopieren
+Bearbeiten
+# mit Tracing
+taskset -c 0-3 /usr/bin/time -f '%E' cargo run -p hpc-core --release --features memtrace --example stm_abort -- \
+  --threads 4 --conflict med --ops 2000000 --seed 1
+# ohne Tracing
+taskset -c 0-3 /usr/bin/time -f '%E' cargo run -p hpc-core --release --example stm_abort -- \
+  --threads 4 --conflict med --ops 2000000 --seed 1
+Ablage & Kurzprüfung
+
+bash
+Kopieren
+Bearbeiten
+find results/FGOS_ubuntu/seed1 -name 'memtrace_summary.txt' -exec \
+  sh -c "echo {}; grep -E 'events_total|aborts|bytes_' {}" \; \
+  > results/FGOS_ubuntu/seed1/summary_matrix.txt
+Das reicht, um unter Ubuntu Jitter, Throughput, perf-Counter, Affinität/NUMA-Effekte und Tracing-Overhead sauber zu beurteilen.

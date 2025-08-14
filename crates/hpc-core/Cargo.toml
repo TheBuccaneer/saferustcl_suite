@@ -1,0 +1,36 @@
+[package]
+name = "hpc-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+once_cell = "1"
+opencl3 = "0.7"
+thiserror = "1"
+bytemuck  = "1.14"
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "vec_add_bench"
+harness = false
+
+[[bench]]
+name = "stencil_bench"
+harness = false
+
+
+[features]
+default = []
+metrics = []
+memtrace = []
+memtrace_full = ["memtrace"]   # <— neu: Alias für cfg(feature="memtrace_full")
+
+[[example]]
+name = "bandwidth_basic"
+path = "examples/bandwidth_basic.rs"
+
+[[example]]
+name = "bandwidth_optimized" 
+path = "examples/bandwidth_optimized.rs"

@@ -1,0 +1,4 @@
+t_start_us,t_end_us,bytes,dir,idle_us
+0,1950,8404992,H2D,0
+1951,5927,0,Kernel,1
+5928,11611,4202496,D2H,1

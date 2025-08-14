@@ -1,0 +1,10 @@
+t_start_us,t_end_us,bytes,dir,idle_us,abort_token,phase
+0,0,16777216,H2D,0,,Transfer
+0,2407,16777216,H2D,0,,Transfer
+25,2452,16777216,H2D,0,,Transfer
+27,6409,16777216,H2D,0,,Transfer
+2454,6463,16777216,H2D,0,,Transfer
+2455,19964,16777216,H2D,0,,Transfer
+6464,91778,0,Kernel,0,,Kernel
+91782,93616,16777216,D2H,4,,Transfer
+91783,93690,16777216,D2H,0,,Transfer

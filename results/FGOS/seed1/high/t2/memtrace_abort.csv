@@ -1,0 +1,2 @@
+abort_token,cause,count,retries_avg,conflict_avg,conflict_min,conflict_max,first_us,last_us
+stm,conflict,400136,1.000,1.000,1,1,1755077828775761,1755077832263236

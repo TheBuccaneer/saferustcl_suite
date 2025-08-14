@@ -1,0 +1,15 @@
+Kurz-Zusammenfassung (heute):
+
+stm_abort deterministisch gemacht: Barrier-Sync, per-Thread-Seed, --ops (weiterhin optional --duration).
+
+Feature-Weiterleitung & Build gefixt: memtrace im Crate, Root bleibt virtuell; Debug-Ausgabe memtrace: ENABLED/DISABLED.
+
+PowerShell-Script run_baseline.ps1 erstellt/überarbeitet: hohe Priorität + CPU-Affinity, Artefakte je Lauf verschieben (inkl. memtrace_events.csv), Summary- und Rates-Tabellen erzeugen.
+
+3×3-Baseline gefahren (t={2,4,8} × {low, med, high}, je 1e6 Ops, Seed=1); Ergebnisse konsistent: events_total = aborts, Bytes=0, Raten ~0.02/0.15/0.40.
+
+Warnings bereinigt (memtrace_full-Alias, unused import).
+
+Fortschrittsausgaben eingebaut (ca. 1×/s pro Thread).
+
+Overhead-Messung: memtrace vs. ohne ⇒ ~+4,22 % (2.4634 s → 2.3638 s).

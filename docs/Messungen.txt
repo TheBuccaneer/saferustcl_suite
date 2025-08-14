@@ -1,0 +1,9 @@
+Wir haben eine deterministische STM-Mikro-Workload aufgebaut (Barrier-Sync, per-Thread Seed, --ops statt Zeitsteuerung) und auf Windows mit hoher Prozesspriorität und fester CPU-Affinität ausgeführt. Gemessen wurde eine 3×3-Baseline: Threads {2,4,8} × Konfliktlevel {low, med, high}, jeweils mit 1 000 000 Operationen, Seed = 1. Artefakte: pro Lauf memtrace_abort.csv (Abort-Events) und memtrace_summary.txt (Aggregat).
+
+Ergebnisse: In allen Läufen gilt events_total = aborts, Transfers bytes_h2d/d2h = 0 (STM-Dummy), idle_total_us = 0. Die beobachteten Abortraten (Aborts / 1e6 Ops) treffen die Sollwerte sehr genau:
+• low ≈ 0.02 (t2: 0.019825; t4: 0.019734; t8: 0.019831)
+• med ≈ 0.15 (t2: 0.149853; t4: 0.149478; t8: 0.149181)
+• high ≈ 0.40 (t2: 0.400136; t4: 0.399961; t8: 0.399408)
+Zeitliche Schwankungen im Messfenster lagen nur im Promille-Bereich und sind für unsere ops-basierte Bewertung irrelevant.
+
+Mehrwert fürs Paper: (1) Reproduzierbarkeit: Der deterministische Harness belegt, dass unsere Messungen bitstabil sind und nicht vom OS-Jitter abhängen. (2) Korrektheit des Tracings: memtrace_abort.csv und Summary sind konsistent, die Pipeline funktioniert end-to-end. (3) Kalibrierte Last: Drei Konfliktregime liefern kontrollierte, realistisch skalierende Abortraten als belastbare Baselines. (4) Grundlage für weitere Evaluierung: Auf dieser Matrix können wir nun Overheads, Throughput und Effekt von Optimierungen (z. B. Backoff-Strategien, Layout-Änderungen) sauber und reproduzierbar quantifizieren.
